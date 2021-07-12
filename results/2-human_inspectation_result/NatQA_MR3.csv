@@ -1,0 +1,7 @@
+﻿Source Question,Ground Truth,Source Answer,Statement (SQ+SA),Target Answer,New Question,New Answer,R1p,R1r,Semantic Similarity Score - Detail,Average,Inspection Conclusion,,,,,,,,,,,,,,
+is the governor of puerto rico democratic or republican?,Democrat,republican,the governor of puerto rico is republican.,the governor of puerto rico,Who is republican ?,chris sununu,1,1,"[0.19828345, 0.37226823, 0.4316924]",0.33408138,NA,,,,,,,,,,,,,JS RESPONSE,scores
+is california in the north east south or west?,West,west,california is in west.,california,What is in west ?,pacific ocean,1,1,[0.41565672],0.41565672,NA,,,,,,,,,,,,,,
+is the uk a state or a country?,country,a country,the uk is a country.,the uk,What is a country ?,united kingdom,1,1,[0.28265673],0.28265673,FP measure,,,,,,,,,,,,,,
+is a potato a tuber or a vegetable?,Tubers,tuber,a potato is tuber.,a potato,What is a tuber ?,"a starchy, tuberous crop",0.8,1,[0.56674397],0.56674397,NA,,,,,,,,,,,,,,
+is a decision of the us supreme court enacted law or common law?,Common law,common law,a decision of the us supreme court is enacted common law.,a decision of the us supreme court,What is enacted common law ?,'',1,1,"[0, 0, 0, 0]",0,NA,,,,,,,,,,,,,,
+does a compass point to true north or magnetic north?,magnetic north,magnetic north,a compass does point to magnetic north.,a compass,What point to magnetic north does what ?,magnetic north pole,0.833333333,0.714285714,[0.463403],0.463403,NA,,,,,,,,,,,,,,
