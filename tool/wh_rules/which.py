@@ -3,7 +3,8 @@ import spacy
 import string
 import nltk
 from nltk.tokenize import word_tokenize
-from pattern.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+from pattern.text.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -60,34 +61,7 @@ def list_to_order(sent, list):
 
 
 def list_to_str(a_list):
-    punc = string.punctuation
-    special = ["-", "/"]
-    this_special = ["$"]
-    front_special = False
-    str_out = ""
-    num = -1
-    for i in a_list:
-        num += 1
-        if num == 0:
-            if i not in punc:
-                str_out = str_out + i
-            else:
-                str_out = str_out + i
-        else:
-            if i in this_special:
-                str_out = str_out + " " + i
-            elif i == "'s":
-                str_out = str_out + i
-            elif i not in punc:
-                if front_special:
-                    str_out = str_out + i
-                    front_special = False
-                else:
-                    str_out = str_out + " " + i
-            else:
-                if i in special:
-                    front_special = True
-                str_out = str_out + i
+    str_out = TreebankWordDetokenizer().detokenize(a_list)
     return str_out
 
 
@@ -125,7 +99,14 @@ def acl(this_acl, dep_tokens_new_question):
 
 
 class which(object):
+
     def generate(self, question, answer):
+        try:
+            return self.generate_statement(question, answer)
+        except IndexError as e:
+            return None
+
+    def generate_statement(self, question, answer):
         if "WHich " in question:
             question = question.replace("WHich ", "which ")
         question = question.replace("  ", " ")
@@ -139,21 +120,21 @@ class which(object):
             question = question + "?"
         doc_question = nlp(question)
         doc_answer = nlp(answer)
-        tokens_question = [token for token in doc_question if token.string.strip() != ""]
-        dep_tokens_question = [token.dep_ for token in doc_question if token.string.strip() != ""]
-        pos_tokens_question = [token.pos_ for token in doc_question if token.string.strip() != ""]
-        str_tokens_answer = [token.string.strip() for token in doc_answer if token.string.strip() != ""]
-        tag_tokens_answer = [token.tag_ for token in doc_answer if token.string.strip() != ""]
-        str_tokens_question = [token.string.strip() for token in doc_question if token.string.strip() != ""]
+        tokens_question = [token for token in doc_question if token.text != ""]
+        dep_tokens_question = [token.dep_ for token in doc_question if token.text != ""]
+        pos_tokens_question = [token.pos_ for token in doc_question if token.text != ""]
+        str_tokens_answer = [token.text for token in doc_answer if token.text != ""]
+        tag_tokens_answer = [token.tag_ for token in doc_answer if token.text != ""]
+        str_tokens_question = [token.text for token in doc_question if token.text != ""]
         have_comma = False
         all_comma = []
         all_which = []
         num = 0
         for token in tokens_question:
-            if token.string.strip() == ",":
+            if token.text == ",":
                 all_comma.append(num)
                 have_comma = True
-            if token.string.strip() == "Which" or token.string.strip() == "which":
+            if token.text == "Which" or token.text == "which":
                 all_which.append(num)
             num += 1
         small_question_start = 0
@@ -169,11 +150,11 @@ class which(object):
         else:
             new_question = question
         doc_new_question = nlp(new_question)
-        tokens_new_question = [token for token in doc_new_question if token.string.strip() != ""]
-        str_tokens_new_question = [token.string.strip() for token in doc_new_question if token.string.strip() != ""]
-        pos_tokens_new_question = [token.pos_ for token in doc_new_question if token.string.strip() != ""]
-        dep_tokens_new_question = [token.dep_ for token in doc_new_question if token.string.strip() != ""]
-        tag_tokens_new_question = [token.tag_ for token in doc_new_question if token.string.strip() != ""]
+        tokens_new_question = [token for token in doc_new_question if token.text != ""]
+        str_tokens_new_question = [token.text for token in doc_new_question if token.text != ""]
+        pos_tokens_new_question = [token.pos_ for token in doc_new_question if token.text != ""]
+        dep_tokens_new_question = [token.dep_ for token in doc_new_question if token.text != ""]
+        tag_tokens_new_question = [token.tag_ for token in doc_new_question if token.text != ""]
         real_root = str_tokens_new_question[dep_tokens_new_question.index("ROOT")]
         real_root_plc = dep_tokens_new_question.index("ROOT")
         which = []
@@ -188,7 +169,7 @@ class which(object):
         vbs_plc = []
         num = 0
         for pos in pos_tokens_new_question:
-            if pos == "VERB" and tokens_new_question[num].string.strip() != conjugate(tokens_new_question[num].lemma_,
+            if pos in ["VERB", 'AUX'] and tokens_new_question[num].text != conjugate(tokens_new_question[num].lemma_,
                                                                                       tense=PRESENT,
                                                                                       aspect=PROGRESSIVE):
                 vbs.append(str_tokens_new_question[num])
@@ -250,7 +231,7 @@ class which(object):
 
                 IN_what_tree = list_to_str(what_tree)
                 doc_what_tree = nlp(IN_what_tree)
-                tag_what_tree = [token.tag_ for token in doc_what_tree if token.string.strip() != ""]
+                tag_what_tree = [token.tag_ for token in doc_what_tree if token.text != ""]
                 num = 0
                 for tag in tag_what_tree:
                     if tag == "IN" and what_tree[num] != "of":
@@ -312,10 +293,10 @@ class which(object):
                 doc_output1 = nlp(list_to_str(output1))
                 output2 = str_tokens_new_question[first_vb_plc + 1:]
                 doc_output2 = nlp(list_to_str(output2))
-                tokens_output2 = [token for token in doc_output2 if token.string.strip() != ""]
-                str_tokens_output2 = [token.string.strip() for token in doc_output2 if token.string.strip() != ""]
-                dep_tokens_output2 = [token.dep_ for token in doc_output2 if token.string.strip() != ""]
-                pos_tokens_output2 = [token.pos_ for token in doc_output2 if token.string.strip() != ""]
+                tokens_output2 = [token for token in doc_output2 if token.text != ""]
+                str_tokens_output2 = [token.text for token in doc_output2 if token.text != ""]
+                dep_tokens_output2 = [token.dep_ for token in doc_output2 if token.text != ""]
+                pos_tokens_output2 = [token.pos_ for token in doc_output2 if token.text != ""]
                 root = str_tokens_output2[dep_tokens_output2.index("ROOT")]
                 root_plc = dep_tokens_output2.index("ROOT")
                 final = []
@@ -370,10 +351,10 @@ class which(object):
                 doc_output1 = nlp(list_to_str(output1))
                 output2 = str_tokens_new_question[first_vb_plc + 1:]
                 doc_output2 = nlp(list_to_str(output2))
-                tokens_output2 = [token for token in doc_output2 if token.string.strip() != ""]
-                str_tokens_output2 = [token.string.strip() for token in doc_output2 if token.string.strip() != ""]
-                dep_tokens_output2 = [token.dep_ for token in doc_output2 if token.string.strip() != ""]
-                pos_tokens_output2 = [token.pos_ for token in doc_output2 if token.string.strip() != ""]
+                tokens_output2 = [token for token in doc_output2 if token.text != ""]
+                str_tokens_output2 = [token.text for token in doc_output2 if token.text != ""]
+                dep_tokens_output2 = [token.dep_ for token in doc_output2 if token.text != ""]
+                pos_tokens_output2 = [token.pos_ for token in doc_output2 if token.text != ""]
                 root = str_tokens_output2[dep_tokens_output2.index("ROOT")]
                 root_plc = dep_tokens_output2.index("ROOT")
                 tag = nltk.pos_tag(str_tokens_output2)
@@ -599,10 +580,10 @@ class which(object):
                 doc_output1 = nlp(list_to_str(output1))
                 output2 = str_tokens_new_question[first_vb_plc + 1:]
                 doc_output2 = nlp(list_to_str(output2))
-                tokens_output2 = [token for token in doc_output2 if token.string.strip() != ""]
-                str_tokens_output2 = [token.string.strip() for token in doc_output2 if token.string.strip() != ""]
-                dep_tokens_output2 = [token.dep_ for token in doc_output2 if token.string.strip() != ""]
-                pos_tokens_output2 = [token.pos_ for token in doc_output2 if token.string.strip() != ""]
+                tokens_output2 = [token for token in doc_output2 if token.text != ""]
+                str_tokens_output2 = [token.text for token in doc_output2 if token.text != ""]
+                dep_tokens_output2 = [token.dep_ for token in doc_output2 if token.text != ""]
+                pos_tokens_output2 = [token.pos_ for token in doc_output2 if token.text != ""]
                 root = str_tokens_output2[dep_tokens_output2.index("ROOT")]
                 root_plc = dep_tokens_output2.index("ROOT")
                 tag = nltk.pos_tag(str_tokens_output2)

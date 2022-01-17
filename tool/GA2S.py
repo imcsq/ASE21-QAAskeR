@@ -1,17 +1,18 @@
-import json
 import spacy
 import string
 import nltk
 import argparse
+import numpy as np
 from tqdm import tqdm
 from nltk import Tree
 from benepar.spacy_plugin import BeneparComponent
 from nltk.tokenize import word_tokenize
-from pattern.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+from pattern.text.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
 
-boolean = ["be", "do", "will", "can", "should", "may", "have", "must", "would", "am", "could", "shell", "might"]
 boolean_set = {"be", "do", "will", "can", "should", "may", "have", "must", "would", "am", "could", "shell", "might"}
 WH_set = {"how", "what", "who", "why", "whose", "where", "when", "which"}
+
 
 def order(child_list, sent_list):
     order_list = []
@@ -25,7 +26,7 @@ def order(child_list, sent_list):
     for part in sent_list[start_plc:]:
         if len(order_list) == len(child_list):
             return order_list, start_plc, num
-        if len(child_list) > len(sent_list)-start_plc:
+        if len(child_list) > len(sent_list) - start_plc:
             return [], 0, 0
         order_list.extend(part)
         num += 1
@@ -45,6 +46,7 @@ def tree_to_list_str(node, tree):
     else:
         tree.insert(0, node.orth_)
 
+
 def tense(word, nlp):
     word_ = nlp(word)
     word_lemma = word_[0].lemma_
@@ -57,33 +59,11 @@ def tense(word, nlp):
     else:
         return 3
 
+
 def list_to_str(a_list):
-    punc = string.punctuation
-    special = ["-", "/"]
-    front_special = False
-    str_out = ""
-    num = -1
-    for i in a_list:
-        num += 1
-        if num == 0:
-            if i not in punc:
-                str_out = str_out + i
-            else:
-                str_out = str_out + i
-        else:
-            if i == "'s":
-                str_out = str_out + i
-            elif i not in punc:
-                if front_special:
-                    str_out = str_out + i
-                    front_special = False
-                else:
-                    str_out = str_out + " " + i
-            else:
-                if i in special:
-                    front_special = True
-                str_out = str_out + i
+    str_out = TreebankWordDetokenizer().detokenize(a_list)
     return str_out
+
 
 def list_to_str2(a_list):
     str_out = ""
@@ -91,6 +71,7 @@ def list_to_str2(a_list):
         for j in i:
             str_out = str_out + " " + j
     return str_out[1:]
+
 
 def shuchu(node, list):
     if isinstance(node, str):
@@ -123,6 +104,7 @@ def intersection(part, answer):
         return True
     return False
 
+
 def is_noun_from_S2W(list_1, pos_list, str_list, str_tokens_answer):
     if_noun = True
     num = -1
@@ -132,16 +114,17 @@ def is_noun_from_S2W(list_1, pos_list, str_list, str_tokens_answer):
         return True
     for i in list_1:
         num += 1
-        if '-' in i and i!= "-":
+        if '-' in i and i != "-":
             continue
         if i not in str_list:
             continue
         plc = str_list.index(i)
         pos = pos_list[plc]
-        if num == len(list_1)-1:
+        if num == len(list_1) - 1:
             if i != "." and pos == "PUNCT":
                 continue
-        if pos not in ["NOUN", "PROPN", "PRON", "ADJ", "ADJP"] and i not in ["'s", "'", "s", "-", "I", "IV", "VI", "well"] and i[-3:] != "ing":
+        if pos not in ["NOUN", "PROPN", "PRON", "ADJ", "ADJP"] and i not in ["'s", "'", "s", "-", "I", "IV", "VI",
+                                                                             "well"] and i[-3:] != "ing":
             if_noun = False
     if "-" in list_1:
         if_noun = True
@@ -153,7 +136,7 @@ def is_noun(list_0, list_1, pos_list):
     num = -1
     for i in list_1:
         num += 1
-        if pos_list[len(list_0)+1+num] not in ["NOUN", "PROPN", "PRON"]:
+        if pos_list[len(list_0) + 1 + num] not in ["NOUN", "PROPN", "PRON"]:
             if_noun = False
     return if_noun
 
@@ -182,7 +165,8 @@ def is_adj(list_1, pos_list, str_list, str_tokens_answer):
             continue
         plc = str_list.index(i)
         pos = pos_list[plc]
-        if pos not in ["ADJ", "ADJP", "DET", "CCONJ"] and i not in ["'s", "'", "s", "a", "an", "A", "-", "I", "IV", "VI", "well"] and i[-3:] != "ing":
+        if pos not in ["ADJ", "ADJP", "DET", "CCONJ"] and i not in ["'s", "'", "s", "a", "an", "A", "-", "I", "IV",
+                                                                    "VI", "well"] and i[-3:] != "ing":
             if_adj = False
     return if_adj
 
@@ -199,19 +183,20 @@ def boolean(question, answer, nlp):
         question = question + "?"
     doc_question = nlp(question)
     doc_answer = nlp(answer)
-    tokens_question = [token for token in doc_question if token.string.strip() != ""]
-    dep_tokens_question = [token.dep_ for token in doc_question if token.string.strip() != ""]
-    pos_tokens_question = [token.pos_ for token in doc_question if token.string.strip() != ""]
-    tag_tokens_question = [token.tag_ for token in doc_question if token.string.strip() != ""]
-    str_tokens_question = [token.string.strip() for token in doc_question if token.string.strip() != ""]
+    tokens_question = [token for token in doc_question if token.text != ""]
+    dep_tokens_question = [token.dep_ for token in doc_question if token.text != ""]
+    pos_tokens_question = [token.pos_ for token in doc_question if token.text != ""]
+    tag_tokens_question = [token.tag_ for token in doc_question if token.text != ""]
+    str_tokens_question = [token.text for token in doc_question if token.text != ""]
     str_tokens_question[0] = str_tokens_question[0].lower()
-    lemma_tokens_question = [token.lemma_ for token in doc_question if token.string.strip() != ""]
-    tokens_answer = [token for token in doc_answer if token.string.strip() != ""]
-    tag_tokens_answer = [token.tag_ for token in doc_answer if token.string.strip() != ""]
-    dep_tokens_answer = [token.dep_ for token in doc_answer if token.string.strip() != ""]
-    pos_tokens_answer = [token.pos_ for token in doc_answer if token.string.strip() != ""]
-    str_tokens_answer = [token.string.strip() for token in doc_answer if token.string.strip() != ""]
-    if "or" in lemma_tokens_question and answer not in ["yes", "no"] and intersection(str_tokens_question, str_tokens_answer):
+    lemma_tokens_question = [token.lemma_ for token in doc_question if token.text != ""]
+    tokens_answer = [token for token in doc_answer if token.text != ""]
+    tag_tokens_answer = [token.tag_ for token in doc_answer if token.text != ""]
+    dep_tokens_answer = [token.dep_ for token in doc_answer if token.text != ""]
+    pos_tokens_answer = [token.pos_ for token in doc_answer if token.text != ""]
+    str_tokens_answer = [token.text for token in doc_answer if token.text != ""]
+    if "or" in lemma_tokens_question and answer not in ["yes", "no"] and intersection(str_tokens_question,
+                                                                                      str_tokens_answer):
         doc = nlp(question)
         sent = list(doc.sents)[0]
         parse_str = sent._.parse_string
@@ -236,7 +221,7 @@ def boolean(question, answer, nlp):
         if_ctn = True
         while if_ctn:
             num += 1
-            if this_one[num-1] == ["'"] and this_one[num+1] == ["'"]:
+            if this_one[num - 1] == ["'"] and this_one[num + 1] == ["'"]:
                 this_one[num - 1].extend(this_one[num])
                 this_one[num - 1].extend(this_one[num + 1])
                 this_one[num] = []
@@ -277,7 +262,7 @@ def boolean(question, answer, nlp):
                 part_plc = this_one.index(part)
                 vb = this_one[0]
                 vb[0] = vb[0][0].lower() + vb[0][1:]
-                word_before_be_plc = str_tokens_question.index(this_one[part_plc-1][0])
+                word_before_be_plc = str_tokens_question.index(this_one[part_plc - 1][0])
                 word_before_be_plc2 = str_tokens_question.index(this_one[part_plc - 2][0])
                 if part_plc == 1:
                     part_1 = this_one[1:part_plc]
@@ -289,9 +274,10 @@ def boolean(question, answer, nlp):
                     final_out = list_to_str2(new_one)
                     final_out = final_out[0].upper() + final_out[1:-2] + "."
                     return final_out
-                if tag_tokens_question[word_before_be_plc] == "IN" and pos_tokens_question[word_before_be_plc2] == "VERB":
-                    vb_in = [this_one[part_plc-2][0], this_one[part_plc-1][0]]
-                    part_1 = this_one[1:part_plc-2]
+                if tag_tokens_question[word_before_be_plc] == "IN" and pos_tokens_question[
+                    word_before_be_plc2] == "VERB":
+                    vb_in = [this_one[part_plc - 2][0], this_one[part_plc - 1][0]]
+                    part_1 = this_one[1:part_plc - 2]
                     part_2 = this_one[part_plc + 1:]
                     new_one = part_1
                     new_one.extend([vb])
@@ -301,9 +287,10 @@ def boolean(question, answer, nlp):
                     final_out = list_to_str2(new_one)
                     final_out = final_out[0].upper() + final_out[1:-2] + "."
                     return final_out
-                elif tag_tokens_question[word_before_be_plc] == "IN" or pos_tokens_question[word_before_be_plc] == "VERB":
+                elif tag_tokens_question[word_before_be_plc] == "IN" or pos_tokens_question[
+                    word_before_be_plc] == "VERB":
                     vb_in = [this_one[part_plc - 1][0]]
-                    part_1 = this_one[1:part_plc-1]
+                    part_1 = this_one[1:part_plc - 1]
                     part_2 = this_one[part_plc + 1:]
                     new_one = part_1
                     new_one.extend([vb])
@@ -330,11 +317,11 @@ def boolean(question, answer, nlp):
         first_vb = str_tokens_question[0].lower()
         new_question = list_to_str(str_tokens_question[1:])
         doc_new_question = nlp(new_question)
-        tokens_new_question = [token for token in doc_new_question if token.string.strip() != ""]
-        dep_tokens_new_question = [token.dep_ for token in doc_new_question if token.string.strip() != ""]
-        tag_tokens_new_question = [token.tag_ for token in doc_new_question if token.string.strip() != ""]
-        pos_tokens_new_question = [token.pos_ for token in doc_new_question if token.string.strip() != ""]
-        str_tokens_new_question = [token.string.strip() for token in doc_new_question if token.string.strip() != ""]
+        tokens_new_question = [token for token in doc_new_question if token.text != ""]
+        dep_tokens_new_question = [token.dep_ for token in doc_new_question if token.text != ""]
+        tag_tokens_new_question = [token.tag_ for token in doc_new_question if token.text != ""]
+        pos_tokens_new_question = [token.pos_ for token in doc_new_question if token.text != ""]
+        str_tokens_new_question = [token.text for token in doc_new_question if token.text != ""]
         root = str_tokens_new_question[dep_tokens_new_question.index("ROOT")]
         root_plc = dep_tokens_new_question.index("ROOT")
         if "VB" not in tag_tokens_new_question[root_plc]:
@@ -382,12 +369,12 @@ def boolean(question, answer, nlp):
                 vb = str_tokens_question[0]
                 same_plc = str_tokens_question.index("same")
                 final = []
-                final.extend(str_tokens_question[1:same_plc-1])
+                final.extend(str_tokens_question[1:same_plc - 1])
                 if this_answer:
                     final.extend([vb])
                 else:
                     final.extend([vb, "not"])
-                final.extend(str_tokens_question[same_plc-1:])
+                final.extend(str_tokens_question[same_plc - 1:])
                 final_out = list_to_str(final)
                 final_out = final_out[0].upper() + final_out[1:-1] + "."
                 return final_out
@@ -527,7 +514,8 @@ def boolean(question, answer, nlp):
                 num += 1
                 if this_one[num] == []:
                     continue
-                if this_one[num][0] in ["with", "of", "on", "in", "that", "which", "who", "of", "and"] and num - 1 in all_nn_adj:
+                if this_one[num][0] in ["with", "of", "on", "in", "that", "which", "who", "of",
+                                        "and"] and num - 1 in all_nn_adj:
                     first_plc = num - 1
                     second_plc = num
                     if first_plc not in comb:
@@ -580,7 +568,7 @@ def boolean(question, answer, nlp):
             num = -1
             for i in range(len(this_one)):
                 num += 1
-                if num == len(this_one)-1:
+                if num == len(this_one) - 1:
                     break
                 if this_one[num] == []:
                     this_one.remove([])
@@ -613,22 +601,24 @@ def boolean(question, answer, nlp):
             final_out = list_to_str(final)
             final_out = final_out[0].upper() + final_out[1:-1] + "."
             return final_out
-        elif str_tokens_question[0].lower() in ["would", "could", "will", "can", "should", "might", "may", "has", "had", "have"]:
+        elif str_tokens_question[0].lower() in ["would", "could", "will", "can", "should", "might", "may", "has", "had",
+                                                "have"]:
             final = []
-            if str_tokens_new_question[root_plc-1] == "been" and str_tokens_new_question[root_plc-2] == "ever":
-                final.extend(str_tokens_new_question[:root_plc-2])
+            if str_tokens_new_question[root_plc - 1] == "been" and str_tokens_new_question[root_plc - 2] == "ever":
+                final.extend(str_tokens_new_question[:root_plc - 2])
                 if this_answer:
                     final.extend([str_tokens_question[0]])
                 else:
                     final.extend([str_tokens_question[0], "not"])
-                final.extend(str_tokens_new_question[root_plc-2:])
-            elif pos_tokens_new_question[root_plc-1] in ["ADJ", "ADV", "ADJP"] or str_tokens_new_question[root_plc-1] == "been":
-                final.extend(str_tokens_new_question[:root_plc-1])
+                final.extend(str_tokens_new_question[root_plc - 2:])
+            elif pos_tokens_new_question[root_plc - 1] in ["ADJ", "ADV", "ADJP"] or str_tokens_new_question[
+                root_plc - 1] == "been":
+                final.extend(str_tokens_new_question[:root_plc - 1])
                 if this_answer:
                     final.extend([str_tokens_question[0]])
                 else:
                     final.extend([str_tokens_question[0], "not"])
-                final.extend(str_tokens_new_question[root_plc-1:])
+                final.extend(str_tokens_new_question[root_plc - 1:])
             else:
                 final.extend(str_tokens_new_question[:root_plc])
                 if this_answer:
@@ -654,23 +644,23 @@ def statement_not_boolean(question, answer, nlp):
         question = question + "?"
     doc_question = nlp(question)
     doc_answer = nlp(answer)
-    tokens_question = [token for token in doc_question if token.string.strip() != ""]
-    dep_tokens_question = [token.dep_ for token in doc_question if token.string.strip() != ""]
-    pos_tokens_question = [token.pos_ for token in doc_question if token.string.strip() != ""]
-    tag_tokens_question = [token.tag_ for token in doc_question if token.string.strip() != ""]
-    str_tokens_question = [token.string.strip() for token in doc_question if token.string.strip() != ""]
+    tokens_question = [token for token in doc_question if token.text != ""]
+    dep_tokens_question = [token.dep_ for token in doc_question if token.text != ""]
+    pos_tokens_question = [token.pos_ for token in doc_question if token.text != ""]
+    tag_tokens_question = [token.tag_ for token in doc_question if token.text != ""]
+    str_tokens_question = [token.text for token in doc_question if token.text != ""]
     str_tokens_question[0] = str_tokens_question[0].lower()
-    lemma_tokens_question = [token.lemma_ for token in doc_question if token.string.strip() != ""]
-    tokens_answer = [token for token in doc_answer if token.string.strip() != ""]
-    tag_tokens_answer = [token.tag_ for token in doc_answer if token.string.strip() != ""]
-    dep_tokens_answer = [token.dep_ for token in doc_answer if token.string.strip() != ""]
-    pos_tokens_answer = [token.pos_ for token in doc_answer if token.string.strip() != ""]
-    str_tokens_answer = [token.string.strip() for token in doc_answer if token.string.strip() != ""]
+    lemma_tokens_question = [token.lemma_ for token in doc_question if token.text != ""]
+    tokens_answer = [token for token in doc_answer if token.text != ""]
+    tag_tokens_answer = [token.tag_ for token in doc_answer if token.text != ""]
+    dep_tokens_answer = [token.dep_ for token in doc_answer if token.text != ""]
+    pos_tokens_answer = [token.pos_ for token in doc_answer if token.text != ""]
+    str_tokens_answer = [token.text for token in doc_answer if token.text != ""]
     if answer == "no" and "ROOT" in dep_tokens_question:
         root_plc = dep_tokens_question.index("ROOT")
         root = str_tokens_question[root_plc]
         if pos_tokens_question[root_plc] == "VERB":
-            if pos_tokens_question[root_plc-1] == "VERB":
+            if pos_tokens_question[root_plc - 1] == "VERB":
                 final = []
                 final.extend(str_tokens_question[:root_plc])
                 final.extend(["not"])
@@ -705,52 +695,46 @@ def statement_not_boolean(question, answer, nlp):
         return final_out
 
 
-def this_main(tsv_file_path, out_file_path, nlp):
-    output = []
-    with open(tsv_file_path, "r", encoding='utf-8', errors='ignore') as f:
-        cnt = 0
-        invalid_lines = 0
-        for line in f:
-            question, answer, article, index, this_dataset, GT = line.split("\t")
-            output.append([question, answer.strip("\n"), article.strip("\n"), GT.strip("\n"), index.strip("\n"), this_dataset.strip("\n")])
-    data = open(out_file_path, 'w', encoding='utf-8')
+def this_main(npy_file_path, out_file_path, nlp):
+    output = np.load(npy_file_path, allow_pickle=True)
+    output = output.tolist()
+    data_save_in_npy = []
     for a_num in tqdm(range(len(output))):
         i = output[a_num]
         question = i[0]
         doc_question = nlp(question)
         tokens_question = [doc_question[0]]
         if tokens_question[0].lemma_ in boolean_set:
-            statement = boolean(question, i[1], nlp)
-            if statement == None:
+            try:
+                statement = boolean(question, i[1], nlp)
+            except IndexError as e:
                 continue
-            if "?" in statement:
-                statement.replace("?", "")
-            if "?" in statement:
-                statement.replace("?", "")
-            print("{\"statement\": \"" + str(statement)
-                  + "\", \"answer\": \"" + i[1]
-                  + "\", \"article\": \"" + i[2]
-                  + "\", \"question\": \"" + question
-                  + "\", \"GT\": \"" + i[3]
-                  + "\", \"index\": \"" + i[4]
-                  + "\", \"dataset\": \"" + i[5] + "\"}", file = data)
+            if statement is None:
+                continue
+            data_save_in_npy.append({'statement': str(statement),
+                                     'answer': i[1],
+                                     'article': i[2],
+                                     'question': question,
+                                     'GT': i[5],
+                                     'index': i[3],
+                                     'dataset': i[4]})
             continue
         elif i[1] in ["yes", "no"] and tokens_question[0].lemma_ not in WH_set:
-            statement = statement_not_boolean(question, i[1], nlp)
-            if statement == None:
+            try:
+                statement = boolean(question, i[1], nlp)
+            except IndexError as e:
                 continue
-            if "?" in statement:
-                statement.replace("?", "")
-            if "?" in statement:
-                statement.replace("?", "")
-            print("{\"statement\": \"" + str(statement)
-                  + "\", \"answer\": \"" + i[1]
-                  + "\", \"article\": \"" + i[2]
-                  + "\", \"question\": \"" + question
-                  + "\", \"GT\": \"" + i[3]
-                  + "\", \"index\": \"" + i[4]
-                  + "\", \"dataset\": \"" + i[5] + "\"}", file = data)
+            if statement is None:
+                continue
+            data_save_in_npy.append({'statement': str(statement),
+                                     'answer': i[1],
+                                     'article': i[2],
+                                     'question': question,
+                                     'GT': i[5],
+                                     'index': i[3],
+                                     'dataset': i[4]})
             continue
+    np.save(out_file_path, data_save_in_npy)
 
 
 def main():
@@ -758,7 +742,7 @@ def main():
 
     # Required parameters
     parser.add_argument(
-        "--tsv_file_path",
+        "--npy_file_path",
         default=None,
         type=str,
         required=True,
@@ -771,18 +755,12 @@ def main():
         required=True,
         help=""
     )
-    parser.add_argument(
-        "--path_to_benepar_en3",
-        default=None,
-        type=str,
-        required=True,
-        help=""
-    )
     args = parser.parse_args()
     nlp = spacy.load('en_core_web_sm')
-    nlp.add_pipe(BeneparComponent(args.path_to_benepar_en3))
+    nlp.add_pipe('benepar', config={'model': 'benepar_en3'})
     args = parser.parse_args()
-    this_main(args.tsv_file_path, args.out_file_path, nlp)
+    this_main(args.npy_file_path, args.out_file_path, nlp)
+
 
 if __name__ == "__main__":
     main()

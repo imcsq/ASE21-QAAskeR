@@ -48,31 +48,22 @@ def main():
     args = parser.parse_args()
     with open(args.new_question_file_path, "r", encoding="utf-8") as f:
         lines_nq = f.readlines()
-    with open(args.information_file_path, "r", encoding="utf-8") as f:
-        lines_info = f.readlines()
-    with open(args.answers_file_path, "r", encoding="utf-8") as f:
-        lines_S = f.readlines()
 
     new_questions = []
-    childrens = []
     for line in lines_nq:
         new_questions.append(line.strip("\n"))
-    for line in lines_S:
-        childrens.append([])
-        i = json.loads(line)
-        for child in i["children"]:
-            childrens[-1].append([child["statement"], child["answer"]])
 
-    yuanquestions = []
-    yuananswers = []
+    childrens = np.load(args.answers_file_path, allow_pickle=True)
+    source_info = np.load(args.information_file_path, allow_pickle=True)
+    source_questions = []
+    source_answers = []
     articles = []
     GT = []
     index = []
     this_dataset = []
-    for line in lines_info:
-        i = json.loads(line)
-        yuanquestions.append(i["yuanquestion"])
-        yuananswers.append(i["yuananswer"])
+    for i in source_info:
+        source_questions.append(i["source_question"])
+        source_answers.append(i["source_answer"])
         articles.append(i["article"])
         GT.append(i["GT"])
         index.append(i["index"])
@@ -86,6 +77,8 @@ def main():
     not_pass_num = 0
     none_question = 0
     num = 0
+
+    all_info = []
     for children_num in tqdm(range(len(childrens))):
         children = childrens[children_num]
         children_scores = []
@@ -114,34 +107,28 @@ def main():
             a.append(i)
         np.random.shuffle(a)
         rdm = a[0]
-        print("{\"primary_question\": \"" + str(yuanquestions[children_scores[rdm][2]])
-              + "\", \"GT\": \"" + GT[children_scores[rdm][2]]
-              + "\", \"primary_answer\": \"" + str(yuananswers[children_scores[rdm][2]])
-              + "\", \"statement\": \"" + str(children_scores[rdm][3])
-              + "\", \"target_answer\": \"" + str(children_scores[rdm][4])
-              + "\", \"new_question\": \"" + str(children_scores[rdm][5])
-              + "\", \"article\": \"" + str(articles[children_scores[rdm][2]])
-              + "\", \"rouge_1_p\": \"" + str(children_scores[rdm][0])
-              + "\", \"rouge_1_r\": \"" + str(children_scores[rdm][1])
-              + "\", \"index\": \"" + str(index[children_scores[rdm][2]])
-              + "\", \"dataset\": \"" + str(this_dataset[children_scores[rdm][2]]) + "\"}",
-              file=data_information_check)
+        all_info.append({'primary_question': source_questions[children_scores[rdm][2]],
+                         'GT': GT[children_scores[rdm][2]],
+                         'primary_answer': source_answers[children_scores[rdm][2]],
+                         'statement': children_scores[rdm][3],
+                         'target_answer': children_scores[rdm][4],
+                         'new_question': children_scores[rdm][5],
+                         'article': articles[children_scores[rdm][2]],
+                         'rouge_1_p': children_scores[rdm][0],
+                         'rouge_1_r': children_scores[rdm][1],
+                         'index': index[children_scores[rdm][2]],
+                         'dataset': this_dataset[children_scores[rdm][2]]})
         all_question_article.append(children_scores[rdm][5] + " \\n " + articles[children_scores[rdm][2]])
         all_answer.append(str(children_scores[rdm][4]))
         pass_num += 1
 
     print("pass: ", pass_num)
     print("fail: ", not_pass_num)
+    np.save(args.out_information_file_path, all_info)
+    data = open(args.out_file_path, 'w', encoding='utf-8')
+    for this_sample_index in range(len(all_question_article)):
+        print(all_question_article[this_sample_index] + "\t" + all_answer[this_sample_index], file=data)
 
-    with open(args.out_file_path, 'w', encoding='utf-8') as f:
-        tsv_w = csv.writer(f, delimiter='\t', lineterminator='\n')
-        num = -1
-        for this_sample in all_question_article:
-            num += 1
-            tsv_w.writerow([all_question_article[num], all_answer[num]])
 
 if __name__ == "__main__":
     main()
-
-
-

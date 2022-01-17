@@ -17,29 +17,27 @@ We implement QAAskeR with a set of python scripts. It is used to **generate the 
 
 
 **Input:** *(For details about the format of file content please refer to the replication instruction.)*
-1) a `.tsv` file with all the source test cases (source inputs & corresponding source outputs given by SUT); 
+1) a `.npy` file with all the source test cases (source inputs & corresponding source outputs given by SUT); 
 
 **Output:** *(For details about the format of file content please refer to the replication instruction.)*
 1) a `.tsv` file for new questions generated with each MR, as well as the follow-up input for SUT.
-2) a `.json` file for the information about target answers.
+2) a `.npy` file for the information about target answers.
 
 ### Instruction to realize *MR1: Wh-question -> New wh-question targetting on different object*
 
 1. run `Q2S.py` to generate declarative sentences with wh-questions and SUT's corresponding outputs.
     ```bash
     python Q2S.py \
-    --tsv_file_path path/to/combined/tsv/file \
-    --out_file_path path/to/output/declarative-sentences/json/file
+    --npy_file_path path/to/combined/npy/file \
+    --out_file_path path/to/output/declarative-sentences/npy/file
     ```
 2. run `S2W.py` to select potential target answers from the declarative sentences.
     ```bash
     python S2W.py \
-    --path_to_benepar_en3 path/to/benepar_en3 \
-    --input_file_path path/to/declarative-sentences/json/file \
-    --information_file_path path/to/output/information/json/file \
-    --answers_file_path path/to/output/answers/json/file \
+    --input_file_path path/to/declarative-sentences/npy/file \
+    --information_file_path path/to/output/information/npy/file \
+    --answers_file_path path/to/output/answers/npy/file \
     --for_unilm_file_path path/to/output/for/unilm/file
-    # (the parser library benepar_en3 can be downloaded from https://github.com/nikitakit/self-attentive-parser/releases)
     ```
 3. generate new wh-questions for all the potential target answers with the UniLM-v1 language model:
     * download the unilm-v1 package from [the unilm project repository](https://github.com/microsoft/unilm/tree/master/unilm-v1).
@@ -67,7 +65,7 @@ We implement QAAskeR with a set of python scripts. It is used to **generate the 
     --new_question_file_path path/to/new/question/file \
     --information_file_path path/to/information/file/from/step2 \
     --answers_file_path path/to/answers/file/from/step2 \
-    --out_information_file_path path/to/output/information/json/file \
+    --out_information_file_path path/to/output/information/npy/file \
     --out_file_path path/to/new/input/tsv/file/for/unifiedqa
     ```
 
@@ -76,19 +74,17 @@ We implement QAAskeR with a set of python scripts. It is used to **generate the 
 2. run `S2G.py` to generage general questions and target answers with the synthesized declarative sentences.
     ```bash
     python S2G.py \
-    --json_file_path path/to/declarative-sentences/json/file \
-    --information_file_path path/to/output/information/json/file \
+    --npy_file_path path/to/declarative-sentences/npy/file \
+    --information_file_path path/to/output/information/npy/file \
     --out_file_path path/to/new/input/tsv/file/for/unifiedqa
     ```
 
 ### Instruction to realize *MR3: General/Alternative question -> Wh-question*
-1. run `QA2S.py` to synthesize declarative sentences with GEN-questions, ALT-question and SUT's outputs. 
+1. run `GA2S.py` to synthesize declarative sentences with GEN-questions, ALT-question and SUT's outputs. 
     ```bash
     python GA2S.py \
     --tsv_file_path path/to/dev/tsv/file \
-    --out_file_path path/to/output/declarative-sentences/json/file \
-    --path_to_benepar_en3 path/to/benepar_en3
-    # (the parser library benepar_en3 can be downloaded from https://github.com/nikitakit/self-attentive-parser/releases)
+    --out_file_path path/to/output/declarative-sentences/npy/file
     ```
 2. run `S2W.py`, `UniLM/decode_seq2seq.py`, and `check_quality_of_questions.py` to obtain the new wh-questions and the  corresponding target answers *(same to step 2-4 in MR1)*.
 
@@ -101,7 +97,7 @@ We implement QAAskeR with a set of python scripts. It is used to **generate the 
 
 **Input:**
 1) a `.tsv` file with all the follow-up outputs (i.e. the answer for the follow-up inputs given by SUT); 
-2) a `.json` file of the information about target answers (one output of follow-up cases generation).
+2) a `.npy` file of the information about target answers (one output of follow-up cases generation).
 
 **Output:**
 1) a `.json` file for the detailed information of the test cases where SUT made a violation.
@@ -112,7 +108,7 @@ We implement QAAskeR with a set of python scripts. It is used to **generate the 
     ```bash
     python calculate_score.py \
     --path_to_vector path/to/wiki-news-300d-1M-subword/vec \
-    --path_to_information path/to/information/json/file \
+    --path_to_information path/to/information/npy/file \
     --path_to_output_from_model path/to/outputs/from/model \
     --path_to_violation path/to/output/violation/file \
     --path_to_pass path/to/output/pass/file

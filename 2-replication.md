@@ -39,22 +39,22 @@ We provide the codes to replicate our experiments, including the scripts to trai
     --output_file path/to/output/tsv/file
     # model_path is the path to the saved best checkpoint (finetuned model) obtained from step 1).
     ```
-3) for each dataset, prepare the source test case information (by aggregating each source input and the corresponding source output into one information item) and dump the information into the corresponding `.tsv` file.
+3) for each dataset, prepare the source test case information (by aggregating each source input and the corresponding source output into one information item) and dump the information into the corresponding `.npy` file.
     ```bash
     python dataset/SQuAD2.py \
     --data_SQuAD2_dev_tsv path/to/source/input/tsv/file \
     --SQuAD2_output_file path/to/source/output/tsv/file \
-    --SQuAD2_tsv path/to/output/combined/tsv/file
+    --SQuAD2_npy path/to/output/combined/npy/file
     
     python dataset/NatQA.py \
     --data_NatQA_dev_tsv path/to/source/input/tsv/file \
     --NatQA_output_file path/to/source/output/tsv/file \
-    --NatQA_tsv path/to/output/combined/tsv/file
+    --NatQA_npy path/to/output/combined/npy/file
     
     python dataset/BoolQ.py \
     --data_BoolQ_dev_tsv path/to/source/input/tsv/file \
     --BoolQ_output_file path/to/source/output/tsv/file \
-    --BoolQ_tsv path/to/output/combined/tsv/file
+    --BoolQ_npy path/to/output/combined/npy/file
     ```
 4) for each dataset, run `QAAskeR` to prepare the follow-up inputs with each MR, which are dumped into some `.tsv` files. *(refer to `1-tool.md` for details)*
 5) run `test/test_model.py` to get SUT output for each of the follow-up inputs and dump the follow-up outputs into the corresponding `.tsv` files.

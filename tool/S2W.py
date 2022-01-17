@@ -7,13 +7,15 @@ import argparse
 from tqdm import tqdm
 from nltk import Tree
 from benepar.spacy_plugin import BeneparComponent
+from nltk.tokenize.treebank import TreebankWordDetokenizer
 from transformers import BertTokenizer, BertForTokenClassification
-tokenizer = BertTokenizer.from_pretrained('bert-large-cased')
 
+tokenizer = BertTokenizer.from_pretrained('bert-large-cased')
 
 list_list_that = [["that"], ["which"], ["who"], ["where"], ["whose"]]
 list_that_set = {"that", "which", "who", "where", "whose"}
-abc_set = {"b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v","w", "x", "y", "z"}
+abc_set = {"b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w",
+           "x", "y", "z"}
 noun_set = {"NOUN", "PROPN", "PRON", "ADJ", "ADJP"}
 noun_set_ = {"'s", "'", "s", "a", "an", "A", "-", "I", "IV", "VI", "well"}
 real_noun_set = {"NOUN", "PROPN", "PRON"}
@@ -21,8 +23,19 @@ adj2_set = {"ADJ", "ADJP", "DET", "NOUN", "PROPN", "PRON", "NUM", "CCONJ"}
 adj_set_ = {"'s", "'", "s", "a", "an", "A", "-", "I", "IV", "VI", "well", "most"}
 IN_set = {"with", "of", "without", "and", "over"}
 tag_set = {"CD", "FW", "JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
-ilegal_words_set = {("the", "range"), ("a", "concern"), ("a", "desire"), ("a", "person"), ("a", "term"), ("an", "event"), ("one", "of", "the"), ("All", "other"), ("efforts"), ("D.C", ".."), ("not", "only"), ("the", "term"), ("the", "world"), ("the", "name"), ("the", "most", "times"), ("the", "last", "time"), ("last", "time"), ("a", "time"), ("some", "people"), ("a", "living"), ("the", "first", "time"), ("the", "public"), ("that", "person"), ("most", "often"), ("dependent", "on"), ("the", "time"), ("one", "individual"), ("more", "so"), ("most", "often"), ("a", "product"), ("the", "most"), ("the", "term"), ("the", "area"), ("the", "last"), ("the", "range"), ("each", "other"), ("the", "efforts"), ("last", "year")}
-single_ilegal_word_set = {("not"), ("also"), ("place"), ("key"), ("other"), ("Other"), ("lack"), ("effect"), ("addition"), ("responsible"), ("pace"), ("most"), ("total"), ("one"), ("many"), ("action"), ("many"), ("most"), ("relation"), ("due"), ("people"), ("total"), ("part"), ("city"), ("someone"), ("regard"), ("data"), ("people"), ("life"), ("total"), ("kind"), ("history"), ("work"), ("mom"), ("dad")}
+ilegal_words_set = {("the", "range"), ("a", "concern"), ("a", "desire"), ("a", "person"), ("a", "term"),
+                    ("an", "event"), ("one", "of", "the"), ("All", "other"), ("efforts"), ("D.C", ".."),
+                    ("not", "only"), ("the", "term"), ("the", "world"), ("the", "name"), ("the", "most", "times"),
+                    ("the", "last", "time"), ("last", "time"), ("a", "time"), ("some", "people"), ("a", "living"),
+                    ("the", "first", "time"), ("the", "public"), ("that", "person"), ("most", "often"),
+                    ("dependent", "on"), ("the", "time"), ("one", "individual"), ("more", "so"), ("most", "often"),
+                    ("a", "product"), ("the", "most"), ("the", "term"), ("the", "area"), ("the", "last"),
+                    ("the", "range"), ("each", "other"), ("the", "efforts"), ("last", "year")}
+single_ilegal_word_set = {("not"), ("also"), ("place"), ("key"), ("other"), ("Other"), ("lack"), ("effect"),
+                          ("addition"), ("responsible"), ("pace"), ("most"), ("total"), ("one"), ("many"), ("action"),
+                          ("many"), ("most"), ("relation"), ("due"), ("people"), ("total"), ("part"), ("city"),
+                          ("someone"), ("regard"), ("data"), ("people"), ("life"), ("total"), ("kind"), ("history"),
+                          ("work"), ("mom"), ("dad")}
 it_set_0 = {"this", "it", "other"}
 it_set = {"this", "it", "other", "me", "him", "her", "them", "they", "you", "he", "she", "I"}
 
@@ -50,7 +63,7 @@ def order(child_list, sent_list, this_one):
     for part in sent_list[start_plc:]:
         if len(order_list) == len(child_list):
             return order_list, this_one_plc, num
-        if len(child_list) > len(sent_list)-start_plc:
+        if len(child_list) > len(sent_list) - start_plc:
             return [], 0, 0
         order_list.append(part)
         num += 1
@@ -114,7 +127,7 @@ def is_noun(list_1, pos_list, str_list, str_tokens_answer):
             continue
         plc = str_list.index(i)
         pos = pos_list[plc]
-        if num == len(list_1)-1:
+        if num == len(list_1) - 1:
             if i not in [".", ","] and pos == "PUNCT":
                 continue
         if pos not in noun_set and i not in noun_set_ and i[-3:] != "ing":
@@ -191,13 +204,6 @@ def shuchu(node, list):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--path_to_benepar_en3",
-        default=None,
-        type=str,
-        required=True,
-        help=""
-    )
-    parser.add_argument(
         "--input_file_path",
         default=None,
         type=str,
@@ -227,13 +233,14 @@ def main():
     )
     args = parser.parse_args()
     nlp = spacy.load('en_core_web_sm')
-    nlp.add_pipe(BeneparComponent(args.path_to_benepar_en3))
+    nlp.add_pipe('benepar', config={'model': 'benepar_en3'})
     nlp2 = spacy.load('en_core_web_sm')
-    with open(args.input_file_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
+
+    source_statements = np.load(args.input_file_path, allow_pickle=True)
+    source_statements = source_statements.tolist()
+
     statements = []
-    for line in lines:
-        i = json.loads(line.strip("\n"))
+    for i in source_statements:
         statement = i["statement"]
         answer = i["answer"]
         article = i["article"]
@@ -243,9 +250,6 @@ def main():
         this_dataset = i["dataset"]
         statements.append([statement, answer, article, question, GT, index, this_dataset])
 
-    data = open(args.for_unilm_file_path, 'w', encoding='utf-8')
-    data_jilu = open(args.information_file_path, 'w', encoding='utf-8')
-    data_jinacha = open(args.answers_file_path, 'w', encoding='utf-8')
     first_num = -1
     print_out_data = []
     print_out_data_jiancha = []
@@ -259,11 +263,11 @@ def main():
         doc = nlp(one[0])
         sent = list(doc.sents)[0]
         doc2 = nlp2(one[0])
-        tokens_sent = [token for token in doc2 if token.string.strip() != ""]
-        str_tokens = [token.string.strip() for token in doc2 if token.string.strip() != ""]
-        pos_tokens = [token.pos_ for token in doc2 if token.string.strip() != ""]
+        tokens_sent = [token for token in doc2 if token.text != ""]
+        str_tokens = [token.text for token in doc2 if token.text != ""]
+        pos_tokens = [token.pos_ for token in doc2 if token.text != ""]
         doc_answer = nlp(one[1])
-        str_tokens_answer = [token.string.strip() for token in doc_answer if token.string.strip() != ""]
+        str_tokens_answer = [token.text for token in doc_answer if token.text != ""]
         parse_str = sent._.parse_string
         t = Tree.fromstring(parse_str)
         this_one = []
@@ -441,10 +445,10 @@ def main():
         legal = []
         num = -1
         doc_answer = nlp(one[1])
-        str_tokens_answer = [token.string.strip() for token in doc_answer if token.string.strip() != ""]
+        str_tokens_answer = [token.text for token in doc_answer if token.text != ""]
         doc_statement = nlp(one[0])
-        str_tokens_statement = [token.string.strip() for token in doc_statement if token.string.strip() != ""]
-        tag_tokens_statement = [token.tag_ for token in doc_statement if token.string.strip() != ""]
+        str_tokens_statement = [token.text for token in doc_statement if token.text != ""]
+        tag_tokens_statement = [token.tag_ for token in doc_statement if token.text != ""]
         ctn = True
         while (ctn):
             if [] in this_one:
@@ -497,38 +501,34 @@ def main():
         a = []
         for i in range(len(legal)):
             a.append(i)
-        start = "{\"children\": ["
-        final_out = start
+
+        final_out = []
+
         the_first = True
         for rdm in range(len(legal)):
             fina_article = statements[a_num][0]
             final_answer = list_to_str(this_one[legal[rdm]])
             tokens_article = tokenizer.tokenize(fina_article)
             tokens_answer = tokenizer.tokenize(final_answer)
-            if the_first:
-                final_out = final_out + "{\"statement\": \"" + one[0] + "\", \"answer\": \"" + final_answer + "\"}"
-                the_first = False
-            else:
-                final_out = final_out + ", " + "{\"statement\": \"" + one[0] + "\", \"answer\": \"" + final_answer + "\"}"
+
+            final_out.append([one[0], final_answer])
+
             print_out_data.append(list_to_str(tokens_article) + " [SEP] " + list_to_str(tokens_answer))
-        final_out = final_out + "]}"
         print_out_data_jiancha.append(final_out)
-        print_out_data_jilu.append("{\"yuananswer\": \"" + one[1]
-                                   + "\", \"yuanquestion\": \"" + one[3]
-                                   + "\", \"article\": \"" + one[2]
-                                   + "\", \"GT\": \"" + one[4]
-                                   + "\", \"index\": \"" + str(one[5])
-                                   + "\", \"dataset\": \"" + one[6] + "\"}")
+        print_out_data_jilu.append({'source_answer': one[1],
+                                    'source_question': one[3],
+                                    'article': one[2],
+                                    'GT': one[4],
+                                    'index': one[5],
+                                    'dataset': one[6]})
+
+    data = open(args.for_unilm_file_path, 'w', encoding='utf-8')
     for i in print_out_data:
         print(i, file=data)
-    for i in print_out_data_jiancha:
-        print(i, file=data_jinacha)
-    for i in print_out_data_jilu:
-        print(i, file=data_jilu)
-
     data.close()
-    data_jinacha.close()
-    data_jilu.close()
+
+    np.save(args.information_file_path, print_out_data_jilu)
+    np.save(args.answers_file_path, print_out_data_jiancha)
 
 
 if __name__ == "__main__":

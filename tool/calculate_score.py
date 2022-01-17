@@ -2,11 +2,12 @@ import json
 import gensim
 import spacy
 import argparse
+import numpy as np
 from numpy import *
 from rouge import Rouge
 from scipy import spatial
 from nltk.corpus import stopwords
-from gensim.models.wrappers import FastText
+from gensim.models import FastText
 
 stop_words = set(stopwords.words('english'))
 
@@ -53,16 +54,16 @@ def main():
         help=""
     )
     args = parser.parse_args()
-    with open(args.path_to_information, "r", encoding="utf-8") as f:
-        lines_f = f.readlines()
     with open(args.path_to_output_from_model, "r", encoding="utf-8") as g:
         lines_g = g.readlines()
 
     model_answer = []
     for line in lines_g:
         this_answer = line.strip()
-        model_answer.append(this_answer.lower())
+        model_answer.append(this_answer)
 
+    all_info = np.load(args.path_to_information, allow_pickle=True)
+    all_info = all_info.tolist()
     new_question = []
     GT = []
     target_answer = []
@@ -74,8 +75,7 @@ def main():
     index = []
     this_dataset = []
     article = []
-    for line in lines_f:
-        i = json.loads(line)
+    for i in all_info:
         article.append(i["article"])
         new_question.append(i["new_question"])
         GT.append(i["GT"])
@@ -93,25 +93,25 @@ def main():
     all_scores = []
     for i in range(len(target_answer)):
         doc_target_answer = nlp(target_answer[i])
-        str_tokens_question = [token.string.strip() for token in doc_target_answer if token.string.strip() != ""]
+        str_tokens_question = [token.text for token in doc_target_answer if token.text != ""]
         doc_model_answer = nlp(model_answer[i])
-        str_model_answer = [token.string.strip() for token in doc_model_answer if token.string.strip() != ""]
+        str_model_answer = [token.text for token in doc_model_answer if token.text != ""]
         list1_0 = str_tokens_question
         list2_0 = str_model_answer
         list1 = [w for w in list1_0 if not w in stop_words]
         list2 = [w for w in list2_0 if not w in stop_words]
         score = []
-        word_vectors = model.wv
+        word_vectors = model.word_vec
         if list2 == [] or list1 == []:
             score = [0.0]
             average = 0.0
             all_scores.append([average, score])
             continue
         for word1 in list1:
-            if word1 in word_vectors.vocab:
+            if word1 in model.key_to_index:
                 a_list_score = []
                 for word2 in list2:
-                    if word2 in word_vectors.vocab:
+                    if word2 in model.key_to_index:
                         similar = model.similarity(word1, word2)
                     else:
                         if word1 in word2:

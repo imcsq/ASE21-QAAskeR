@@ -1,5 +1,4 @@
-import json
-import csv
+import numpy as np
 import argparse
 
 
@@ -21,7 +20,7 @@ def main():
         help=""
     )
     parser.add_argument(
-        "--NatQA_tsv",
+        "--NatQA_npy",
         default=None,
         type=str,
         required=True,
@@ -46,25 +45,16 @@ def main():
             num += 1
             question_article, answer = line.split("\t")
             question, article = question_article.split("\\n")
-            question = question.replace("\\", "")
-            question = question.replace('"', "'")
-            answer = answer.replace("\\", "")
-            answer = answer.replace('"', "'")
-            article = article.replace("\\", "")
-            article = article.replace('"', "'")
             all_question.append(question)
             all_answer.append(answer.strip())
             all_article.append(article)
             all_index.append(num)
-
-    with open(args.NatQA_tsv, 'w', encoding='utf-8') as f:
-        tsv_w = csv.writer(f, delimiter='\t', lineterminator='\n')
-        num = -1
-        for answer in output:
-            num += 1
-            if "no answer" not in answer:
-                tsv_w.writerow(
-                    [all_question[num], output[num], all_article[num], all_index[num], "NatQA", all_answer[num]])
+    
+    data_save_in_npy = []
+    for index in range(len(output)):
+        if "no answer" not in output[index]:
+            data_save_in_npy.append([all_question[index], output[index], all_article[index], all_index[index], "NatQA", all_answer[index]])
+    np.save(args.NatQA_npy, data_save_in_npy)
 
 
 if __name__ == "__main__":

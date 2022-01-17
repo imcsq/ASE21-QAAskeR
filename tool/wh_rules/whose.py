@@ -3,7 +3,8 @@ import spacy
 import string
 import nltk
 from nltk.tokenize import word_tokenize
-from pattern.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+from pattern.text.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -60,34 +61,7 @@ def list_to_order(sent, list):
 
 
 def list_to_str(a_list):
-    punc = string.punctuation
-    special = ["-", "/"]
-    this_special = ["$"]
-    front_special = False
-    str_out = ""
-    num = -1
-    for i in a_list:
-        num += 1
-        if num == 0:
-            if i not in punc:
-                str_out = str_out + i
-            else:
-                str_out = str_out + i
-        else:
-            if i in this_special:
-                str_out = str_out + " " + i
-            elif i == "'s":
-                str_out = str_out + i
-            elif i not in punc:
-                if front_special:
-                    str_out = str_out + i
-                    front_special = False
-                else:
-                    str_out = str_out + " " + i
-            else:
-                if i in special:
-                    front_special = True
-                str_out = str_out + i
+    str_out = TreebankWordDetokenizer().detokenize(a_list)
     return str_out
 
 
@@ -125,7 +99,14 @@ def acl(this_acl, dep_tokens_new_question):
 
 
 class whose(object):
+
     def generate(self, question, answer):
+        try:
+            return self.generate_statement(question, answer)
+        except IndexError as e:
+            return None
+
+    def generate_statement(self, question, answer):
         question = question.replace("  ", " ")
         if question[-1] == " ":
             question = question[:-1]
@@ -137,13 +118,13 @@ class whose(object):
             question = question + "?"
         doc_question = nlp(question)
         doc_answer = nlp(answer)
-        tokens_question = [token for token in doc_question if token.string.strip() != ""]
-        dep_tokens_question = [token.dep_ for token in doc_question if token.string.strip() != ""]
-        pos_tokens_question = [token.pos_ for token in doc_question if token.string.strip() != ""]
-        str_tokens_answer = [token.string.strip() for token in doc_answer if token.string.strip() != ""]
-        tag_tokens_answer = [token.tag_ for token in doc_answer if token.string.strip() != ""]
-        dep_tokens_answer = [token.dep_ for token in doc_answer if token.string.strip() != ""]
-        str_tokens_question = [token.string.strip() for token in doc_question if token.string.strip() != ""]
+        tokens_question = [token for token in doc_question if token.text != ""]
+        dep_tokens_question = [token.dep_ for token in doc_question if token.text != ""]
+        pos_tokens_question = [token.pos_ for token in doc_question if token.text != ""]
+        str_tokens_answer = [token.text for token in doc_answer if token.text != ""]
+        tag_tokens_answer = [token.tag_ for token in doc_answer if token.text != ""]
+        dep_tokens_answer = [token.dep_ for token in doc_answer if token.text != ""]
+        str_tokens_question = [token.text for token in doc_question if token.text != ""]
         whose_plc = []
         num = -1
         for token in tokens_question:

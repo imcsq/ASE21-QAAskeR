@@ -4,9 +4,11 @@ import string
 import csv
 import nltk
 import argparse
+import numpy as np
 from tqdm import tqdm
 from nltk.tokenize import word_tokenize
-from pattern.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+from pattern.text.en import conjugate, lemma, lexeme, PRESENT, INFINITIVE, PAST, FUTURE, SG, PLURAL, PROGRESSIVE
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -27,34 +29,7 @@ def tense(word):
 
 
 def list_to_str(a_list):
-    punc = string.punctuation
-    special = ["-", "/"]
-    this_special = ["$"]
-    front_special = False
-    str_out = ""
-    num = -1
-    for i in a_list:
-        num += 1
-        if num == 0:
-            if i not in punc:
-                str_out = str_out + i
-            else:
-                str_out = str_out + i
-        else:
-            if i in this_special:
-                str_out = str_out + " " + i
-            elif i == "'s":
-                str_out = str_out + i
-            elif i not in punc:
-                if front_special:
-                    str_out = str_out + i
-                    front_special = False
-                else:
-                    str_out = str_out + " " + i
-            else:
-                if i in special:
-                    front_special = True
-                str_out = str_out + i
+    str_out = TreebankWordDetokenizer().detokenize(a_list)
     return str_out
 
 
@@ -66,11 +41,11 @@ def S2I(a_question):
     if "?" in question:
         question = question.replace("?", "")
     doc_question = nlp(question)
-    tokens_question = [token for token in doc_question if token.string.strip() != ""]
-    str_tokens_question = [token.string.strip() for token in tokens_question if token.string.strip() != ""]
-    dep_tokens_question = [token.dep_ for token in doc_question if token.string.strip() != ""]
-    pos_tokens_question = [token.pos_ for token in doc_question if token.string.strip() != ""]
-    lemma_tokens_question = [token.lemma_ for token in doc_question if token.string.strip() != ""]
+    tokens_question = [token for token in doc_question if token.text != ""]
+    str_tokens_question = [token.text for token in tokens_question if token.text != ""]
+    dep_tokens_question = [token.dep_ for token in doc_question if token.text != ""]
+    pos_tokens_question = [token.pos_ for token in doc_question if token.text != ""]
+    lemma_tokens_question = [token.lemma_ for token in doc_question if token.text != ""]
     root = str_tokens_question[dep_tokens_question.index("ROOT")]
     root_plc = dep_tokens_question.index("ROOT")
     punct_plc = len(tokens_question)
@@ -90,7 +65,7 @@ def S2I(a_question):
         all_comma = []
         num = 0
         for token in tokens_question:
-            if token.string.strip() == ",":
+            if token.text == ",":
                 if pos_tokens_question[num-1] != "NUM" and pos_tokens_question[num+1] != "NUM":
                     all_comma.append(num)
                     have_comma = True
@@ -111,11 +86,11 @@ def S2I(a_question):
         else:
             new_question = question
         doc_new_question = nlp(new_question)
-        tokens_question = [token for token in doc_new_question if token.string.strip() != ""]
-        str_tokens_question = [token.string.strip() for token in doc_new_question if token.string.strip() != ""]
-        pos_tokens_question = [token.pos_ for token in doc_new_question if token.string.strip() != ""]
-        dep_tokens_question = [token.dep_ for token in doc_new_question if token.string.strip() != ""]
-        lemma_tokens_question = [token.lemma_ for token in doc_new_question if token.string.strip() != ""]
+        tokens_question = [token for token in doc_new_question if token.text != ""]
+        str_tokens_question = [token.text for token in doc_new_question if token.text != ""]
+        pos_tokens_question = [token.pos_ for token in doc_new_question if token.text != ""]
+        dep_tokens_question = [token.dep_ for token in doc_new_question if token.text != ""]
+        lemma_tokens_question = [token.lemma_ for token in doc_new_question if token.text != ""]
         root = str_tokens_question[dep_tokens_question.index("ROOT")]
         root_plc = dep_tokens_question.index("ROOT")
     if root in ["be", "is", "are", "was", "were", "am"]:
@@ -178,11 +153,11 @@ def S2I(a_question):
         if this_tense == 1:
             if "be" not in lemma_tokens_question:
                 doc_question = nlp(question)
-                tokens_question = [token for token in doc_question if token.string.strip() != ""]
-                str_tokens_question = [token.string.strip() for token in tokens_question if token.string.strip() != ""]
-                dep_tokens_question = [token.dep_ for token in doc_question if token.string.strip() != ""]
-                pos_tokens_question = [token.pos_ for token in doc_question if token.string.strip() != ""]
-                lemma_tokens_question = [token.lemma_ for token in doc_question if token.string.strip() != ""]
+                tokens_question = [token for token in doc_question if token.text != ""]
+                str_tokens_question = [token.text for token in tokens_question if token.text != ""]
+                dep_tokens_question = [token.dep_ for token in doc_question if token.text != ""]
+                pos_tokens_question = [token.pos_ for token in doc_question if token.text != ""]
+                lemma_tokens_question = [token.lemma_ for token in doc_question if token.text != ""]
                 first_vb = []
                 num = -1
                 for i in pos_tokens_question:
@@ -327,7 +302,7 @@ def S2I(a_question):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--json_file_path",
+        "--npy_file_path",
         default=None,
         type=str,
         required=True,
@@ -348,55 +323,44 @@ def main():
         help=""
     )
     args = parser.parse_args()
-    file_path = args.json_file_path
-    with open(file_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
+    output = np.load(args.npy_file_path, allow_pickle=True)
+    output.tolist()
     statements = []
-    for line in lines:
-        i = json.loads(line.strip("\n"))
-        statement = i["statement"]
-        GT = i["GT"]
-        answer = i["answer"]
-        article = i["article"]
-        question = i["question"]
-        index = i["index"]
-        this_dataset = i["dataset"]
+    for this_output in output:
+        statement = this_output["statement"]
+        GT = this_output["GT"]
+        answer = this_output["answer"]
+        article = this_output["article"]
+        question = this_output["question"]
+        index = this_output["index"]
+        this_dataset = this_output["dataset"]
         statements.append([statement, answer, article, question, GT, index, this_dataset])
-
-    data_jinacha = open(args.information_file_path, 'w', encoding='utf-8')
-    new_questions = []
     all_question_article = []
-    all_jiancha = []
+    all_check = []
     all_answer = []
     for a_num in tqdm(range(len(statements))):
         one = statements[a_num]
         if one[0] == "None":
             continue
         new_question = S2I(one[0])
-        new_questions.append(new_question)
         all_question_article.append(str(new_question) + " \\n " + str(one[2]))
-        all_jiancha.append("{\"primary_question\": \"" + one[3]
-                           + "\", \"GT\": \"" + one[4]
-                           + "\", \"primary_answer\": \"" + one[1]
-                           + "\", \"statement\": \"" + statements[a_num][0]
-                           + "\", \"target_answer\": \"" + "yes"
-                           + "\", \"new_question\": \"" + new_question
-                           + "\", \"article\": \"" + one[2]
-                           + "\", \"rouge_1_p\": \"" + str(1)
-                           + "\", \"rouge_1_r\": \"" + str(1)
-                           + "\", \"index\": \"" + str(one[5])
-                           + "\", \"dataset\": \"" + str(one[6]) + "\"}")
+        all_check.append({'primary_question': one[3],
+                           'GT': one[4],
+                           'primary_answer': one[1],
+                           'statement': statements[a_num][0],
+                           'target_answer': "yes",
+                           'new_question': new_question,
+                           'article': one[2],
+                           'rouge_1_p': 1,
+                           'rouge_1_r': 1,
+                           'index': one[5],
+                           'dataset': one[6]})
         all_answer.append("yes")
+    np.save(args.information_file_path, all_check)
+    data = open(args.out_file_path, 'w', encoding='utf-8')
+    for this_sample_index in range(len(all_question_article)):
+        print(all_question_article[this_sample_index]+"\t"+all_answer[this_sample_index], file=data)
 
-    for i in all_jiancha:
-        print(i, file=data_jinacha)
-
-    with open(args.out_file_path, 'w', encoding='utf-8') as f:
-        tsv_w = csv.writer(f, delimiter='\t', lineterminator='\n')
-        num = -1
-        for this_sample in new_questions:
-            num += 1
-            tsv_w.writerow([all_question_article[num], all_answer[num]])
 
 if __name__ == "__main__":
     main()
