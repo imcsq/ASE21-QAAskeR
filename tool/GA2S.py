@@ -313,7 +313,7 @@ def boolean(question, answer, nlp):
         if answer == "yes":
             this_answer = 1
         else:
-            this_answer = 0
+            this_answer = 1
         first_vb = str_tokens_question[0].lower()
         new_question = list_to_str(str_tokens_question[1:])
         doc_new_question = nlp(new_question)

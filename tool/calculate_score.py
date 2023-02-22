@@ -141,13 +141,18 @@ def main():
 
     violations = []
     pass_samples = []
-    num = -1
-    for i in all_scores:
-        num += 1
-        if i[0] > 0.6:
-            pass_samples.append(num)
+    for this_index, score in enumerate(all_scores):
+        this_source_answer = yuananswer[this_index]
+        if this_source_answer.lower() == 'no':
+            if score[0] > 0.6:
+                violations.append(this_index)
+            else:
+                pass_samples.append(this_index)
         else:
-            violations.append(num)
+            if score[0] > 0.6:
+                pass_samples.append(this_index)
+            else:
+                violations.append(this_index)
 
     data_violation = open(args.path_to_violation, 'w', encoding='utf-8')
     data_pass = open(args.path_to_pass, 'w', encoding='utf-8')
