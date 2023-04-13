@@ -40,7 +40,7 @@ We implement QAAskeR with a set of python scripts. It is used to **generate the 
     --for_unilm_file_path path/to/output/for/unilm/file
     ```
 3. generate new wh-questions for all the potential target answers with the UniLM-v1 language model:
-    * download the unilm-v1 package from [the unilm project repository](https://github.com/microsoft/unilm/tree/master/unilm-v1).
+    * download the unilm-v1 question generation model from [the unilm project repository](https://github.com/microsoft/unilm/tree/master/unilm-v1); the link to this model (checkpoint) can be found in the section of *Question Generation - SQuAD* in the project page.
     * run `decode_seq2seq.py` in the unilm-v1 package to generate new wh-questions as follows:
     ```bash
     python decode_seq2seq.py \
